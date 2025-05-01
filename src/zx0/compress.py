@@ -37,7 +37,7 @@
 # compress.py
 
 import sys
-from zx0_common import Block, BitStreamWriter, INITIAL_OFFSET, elias_gamma_bits
+from .zx0_common import Block, BitStreamWriter, INITIAL_OFFSET, elias_gamma_bits
 
 def compress(optimal_end_block: Block or None,
              input_data: bytes,

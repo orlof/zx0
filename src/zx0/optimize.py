@@ -36,7 +36,7 @@
 # optimize.py
 
 import sys
-from zx0_common import Block, INITIAL_OFFSET, elias_gamma_bits, offset_ceiling, MAX_SCALE
+from .zx0_common import Block, INITIAL_OFFSET, elias_gamma_bits, offset_ceiling, MAX_SCALE
 
 def optimize(input_data: bytes, input_size: int, skip: int, offset_limit: int) -> Block or None:
     """
