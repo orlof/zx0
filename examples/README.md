@@ -12,8 +12,7 @@ This directory contains examples demonstrating how to use ZX0 as a Python librar
 To run the examples, make sure you have installed the ZX0 package:
 
 ```bash
-# From the root directory of the project
-pip install -e .
+pip install zx0
 ```
 
 Then you can run the example scripts:

@@ -16,6 +16,7 @@ setuptools.setup(
     name="zx0",
     version="2.2.0",
     author="Orlof, Einar Saukas (Original C Author)",
+    author_email='orlof@users.noreply.github.com',
     description="Python port of ZX0 v2.2 optimal data compressor",
     long_description=read_readme(),
     long_description_content_type="text/markdown",

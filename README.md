@@ -22,16 +22,14 @@ This Python version aims to replicate the functionality of the C implementation 
 
 ## Requirements
 
-*   Python 3.x (Tested with 3.6+, should work on most recent versions)
+*   Python 3.x (Tested with 3.12+, should work on most recent versions)
 
 ## Installation
 
-No formal installation is required. Simply clone this repository or download the `.py` files:
+Normal pip installation
 
 ```bash
-git clone https://github.com/orlof/zx0.git
-cd zx0
-pip install .
+pip install zx0
 ```
 
 ## Usage
@@ -161,4 +159,4 @@ The individual .py files contain the following copyright notice and license term
 
 ## Note
 
-Please be aware that this Python implementation is primarily intended for educational purposes, experimentation, and integration within Python toolchains. This implementation is not well tested.
+Please be aware that this Python implementation is primarily intended for educational purposes, experimentation, and integration within Python toolchains. Translation from C to python was done using AI model and this implementation is not well tested.
