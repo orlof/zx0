@@ -35,18 +35,22 @@ cd <repository-directory>
 
 ## Usage
 
+ZX0 can be used either as a command-line tool or as a Python library in your own scripts.
+
+### Command-Line Usage
+
 The main script is zx0.py. Run it from your terminal:
 
 ```bash
 python zx0.py [options] input_file [output_file]
 ```
 
-### Arguments:
+#### Arguments:
 
 - input_file: Path to the file you want to compress.
 - output_file (optional): Path for the compressed output. If omitted, defaults to <input_file>.zx0.
 
-### Options:
+#### Options:
 
 - -f, --force: Force overwrite of the output file if it already exists.
 - -c, --classic: Use classic file format (v1.*).
@@ -54,7 +58,7 @@ python zx0.py [options] input_file [output_file]
 - -q, --quick: Use quick (non-optimal) compression mode.
 - --skip N: Skip the first N bytes of the input file.
 
-### Examples:
+#### Examples:
 
 ```bash
 # Compress data.bin to data.bin.zx0
@@ -69,6 +73,41 @@ python zx0.py code.asm code.zx0 -b -f
 # Compress using quick mode, skipping 64 bytes
 python zx0.py level.map level.zx0 -q --skip 64
 ```
+
+### Library Usage
+
+You can also use ZX0 as a library in your Python scripts:
+
+```python
+from zx0 import zx0_compress
+
+# Compress some data
+data = b"Your binary data here"
+compressed_data, stats = zx0_compress(data)
+
+# Use the compressed data
+print(f"Compressed from {stats['original_size']} to {stats['compressed_size']} bytes")
+print(f"Compression ratio: {stats['ratio']:.4f}")
+```
+
+The `zx0_compress` function accepts the following parameters:
+
+- `input_data` (bytes or bytearray): The data to compress
+- `skip` (int, optional): Number of bytes to skip from the beginning. Default: 0
+- `backwards` (bool, optional): Compress backwards. Default: False
+- `classic` (bool, optional): Use classic file format (v1.*). Default: False
+- `quick` (bool, optional): Use quick non-optimal compression. Default: False
+
+It returns a tuple containing:
+1. The compressed data as bytes
+2. A dictionary with compression statistics:
+   - `original_size`: Size of the input data (after skip)
+   - `compressed_size`: Size of the compressed data
+   - `delta`: Difference between original and compressed sizes
+   - `duration`: Time taken to compress in seconds
+   - `ratio`: Compression ratio (compressed_size / original_size)
+
+For more examples, see the `examples` directory.
 
 ## Files
 

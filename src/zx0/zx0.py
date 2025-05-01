@@ -55,6 +55,106 @@ def reverse_bytearray(data: bytearray):
         left += 1
         right -= 1
 
+def zx0_compress(input_data: bytes | bytearray,
+                 skip: int = 0,
+                 backwards: bool = False,
+                 classic: bool = False,
+                 quick: bool = False) -> tuple[bytes, dict]:
+    """
+    Compresses the input data using the ZX0 algorithm.
+
+    Args:
+        input_data: The raw byte data to compress.
+        skip: Number of bytes to skip from the beginning of input_data. Defaults to 0.
+        backwards: Compress in reverse order. Defaults to False.
+        classic: Use classic v1 format (affects invert_mode). Defaults to False.
+        quick: Use faster, less optimal compression (ZX7 offset limit). Defaults to False.
+
+    Returns:
+        A tuple containing:
+        - compressed_data: The compressed data as bytes.
+        - stats: A dictionary with compression statistics like
+                 {'original_size': int, 'compressed_size': int,
+                  'delta': int, 'duration': float}.
+                 original_size refers to the size of the data actually compressed (after skip).
+
+    Raises:
+        ValueError: If skip value is invalid or input_data is empty/too short after skip.
+        RuntimeError: If optimization or compression fails internally.
+    """
+    # Validate input
+    input_size = len(input_data)
+    if input_size == 0:
+        raise ValueError("Empty input data")
+    
+    if skip < 0:
+        raise ValueError(f"Invalid skip value {skip}")
+    
+    if skip >= input_size:
+        raise ValueError(f"Skip value {skip} exceeds input data size {input_size}")
+    
+    # Make input data mutable if needed
+    if isinstance(input_data, bytes):
+        input_data = bytearray(input_data)
+    
+    # Start timing
+    start_time = time.time()
+    
+    # Conditionally reverse input for backwards mode
+    if backwards:
+        reverse_bytearray(input_data)
+        # Note: The 'skip' parameter applies to the *original* file start.
+        # In backwards mode, the effective data to compress is the *last*
+        # (input_size - skip) bytes of the original file, which are now
+        # at the *beginning* of the reversed buffer.
+        effective_input_size = input_size
+        effective_skip = 0  # We process from the start of the reversed buffer
+        data_to_compress_len = input_size - skip  # This is the amount of data we care about
+    else:
+        # Normal mode: compress data from index `skip` onwards
+        effective_input_size = input_size
+        effective_skip = skip
+        data_to_compress_len = input_size - skip
+    
+    offset_limit = MAX_OFFSET_ZX7 if quick else MAX_OFFSET_ZX0
+    
+    # Invert mode logic (v2+ feature, disabled for classic or backwards)
+    invert_mode = not classic and not backwards
+    
+    # Run Optimization
+    optimal_block = optimize(input_data, effective_input_size, effective_skip, offset_limit)
+    
+    if optimal_block is None:
+        raise RuntimeError("Optimization failed")
+    
+    # Run Compression
+    output_data, output_size, delta = compress(
+        optimal_block, input_data, effective_input_size, effective_skip,
+        backwards, invert_mode
+    )
+    
+    if output_data is None:
+        raise RuntimeError("Compression failed")
+    
+    # Conditionally reverse output data if compressing backwards
+    if backwards:
+        reverse_bytearray(output_data)
+    
+    # Calculate stats
+    end_time = time.time()
+    duration = end_time - start_time
+    
+    stats = {
+        'original_size': data_to_compress_len,
+        'compressed_size': output_size,
+        'delta': delta,
+        'duration': duration,
+        'ratio': (output_size / data_to_compress_len if data_to_compress_len > 0 else 0)
+    }
+    
+    # Return compressed data as bytes and stats
+    return bytes(output_data), stats
+
 def main():
     parser = argparse.ArgumentParser(
         description="ZX0 v2.2 (Python): Optimal data compressor by Einar Saukas.",
@@ -129,80 +229,42 @@ def main():
         print(f"Error: Already existing output file {output_name} (use -f to overwrite)", file=sys.stderr)
         sys.exit(1)
 
-    # Make input data mutable if we need to reverse it
-    input_data = bytearray(input_data_bytes)
-
-    # --- Prepare for Compression ---
-    start_time = time.time()
-
-    # Conditionally reverse input for backwards mode
-    if args.backwards:
-        print("Compressing backwards...")
-        reverse_bytearray(input_data)
-        # Note: The 'skip' parameter applies to the *original* file start.
-        # In backwards mode, the effective data to compress is the *last*
-        # (input_size - skip) bytes of the original file, which are now
-        # at the *beginning* of the reversed buffer.
-        effective_input_size = input_size
-        effective_skip = 0 # We process from the start of the reversed buffer
-        data_to_compress_len = input_size - skip # This is the amount of data we care about
-    else:
-        # Normal mode: compress data from index `skip` onwards
-        effective_input_size = input_size
-        effective_skip = skip
-        data_to_compress_len = input_size - skip
-
-    offset_limit = MAX_OFFSET_ZX7 if args.quick else MAX_OFFSET_ZX0
-
-    # Invert mode logic (v2+ feature, disabled for classic or backwards)
-    # C code: !classic_mode && !backwards_mode
-    invert_mode = not args.classic and not args.backwards
-
-    # --- Run Optimization ---
-    # Pass the effective region to optimize
-    optimal_block = optimize(input_data, effective_input_size, effective_skip, offset_limit)
-
-    if optimal_block is None:
-         print("Error: Optimization failed.", file=sys.stderr)
-         sys.exit(1)
-
-    # --- Run Compression ---
-    # Pass the same effective region details to compress
-    output_data, output_size, delta = compress(
-        optimal_block, input_data, effective_input_size, effective_skip,
-        args.backwards, invert_mode
-    )
-
-    if output_data is None:
-        print("Error: Compression failed.", file=sys.stderr)
-        sys.exit(1)
-
-    # Conditionally reverse output data if compressing backwards
-    if args.backwards:
-        reverse_bytearray(output_data)
-
-    # --- Write Output File ---
+    # Use the library function to compress the data
     try:
-        with open(output_name, "wb") as ofp:
-            bytes_written = ofp.write(output_data)
-            if bytes_written != output_size:
-                 raise IOError("Failed to write all compressed bytes")
-    except IOError as e:
-        print(f"Error: Cannot write output file {output_name}: {e}", file=sys.stderr)
-        # Attempt to clean up potentially partially written file
+        if args.backwards:
+            print("Compressing backwards...")
+            
+        output_data, stats = zx0_compress(
+            input_data_bytes,
+            skip=skip,
+            backwards=args.backwards,
+            classic=args.classic,
+            quick=args.quick
+        )
+        
+        # --- Write Output File ---
         try:
-            os.remove(output_name)
-        except OSError:
-            pass
+            with open(output_name, "wb") as ofp:
+                bytes_written = ofp.write(output_data)
+                if bytes_written != stats['compressed_size']:
+                    raise IOError("Failed to write all compressed bytes")
+        except IOError as e:
+            print(f"Error: Cannot write output file {output_name}: {e}", file=sys.stderr)
+            # Attempt to clean up potentially partially written file
+            try:
+                os.remove(output_name)
+            except OSError:
+                pass
+            sys.exit(1)
+            
+        # --- Final Report ---
+        print(f"File{(' partially' if skip > 0 else '')} compressed{(' backwards' if args.backwards else '')} from {stats['original_size']} to {stats['compressed_size']} bytes! (delta {stats['delta']})")
+        print(f"Compression ratio: {stats['ratio']:.4f}")
+        print(f"Processing time: {stats['duration']:.2f} seconds")
+        
+    except (ValueError, RuntimeError) as e:
+        print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
-
-    end_time = time.time()
-    duration = end_time - start_time
-
-    # --- Final Report ---
-    print(f"File{(' partially' if skip > 0 else '')} compressed{(' backwards' if args.backwards else '')} from {data_to_compress_len} to {output_size} bytes! (delta {delta})")
-    print(f"Compression ratio: {(output_size / data_to_compress_len if data_to_compress_len > 0 else 0):.4f}")
-    print(f"Processing time: {duration:.2f} seconds")
 
 if __name__ == "__main__":
     main()
