@@ -29,8 +29,9 @@ This Python version aims to replicate the functionality of the C implementation 
 No formal installation is required. Simply clone this repository or download the `.py` files:
 
 ```bash
-git clone <your-repository-url>
-cd <repository-directory>
+git clone https://github.com/orlof/zx0.git
+cd zx0
+pip install .
 ```
 
 ## Usage
@@ -42,7 +43,7 @@ ZX0 can be used either as a command-line tool or as a Python library in your own
 The main script is zx0.py. Run it from your terminal:
 
 ```bash
-python zx0.py [options] input_file [output_file]
+zx0 [options] input_file [output_file]
 ```
 
 #### Arguments:
@@ -62,16 +63,16 @@ python zx0.py [options] input_file [output_file]
 
 ```bash
 # Compress data.bin to data.bin.zx0
-python zx0.py data.bin
+zx0 data.bin
 
 # Compress image.raw to compressed.zx0
-python zx0.py image.raw compressed.zx0
+zx0 image.raw compressed.zx0
 
 # Compress backwards and force overwrite
-python zx0.py code.asm code.zx0 -b -f
+zx0 code.asm code.zx0 -b -f
 
 # Compress using quick mode, skipping 64 bytes
-python zx0.py level.map level.zx0 -q --skip 64
+zx0 level.map level.zx0 -q --skip 64
 ```
 
 ### Library Usage
